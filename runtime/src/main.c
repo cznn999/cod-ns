@@ -393,12 +393,17 @@ void rt_probe(Ctx *c, uint32_t func)
            RD32(c->r[4] + 4u), RD32(c->r[4] + 8u), RD32(c->r[4] + 12u));
 }
 
+#if defined(__vita__) || defined(__SWITCH__)
 #if defined(__vita__)
-/* No environment on the Vita: ux0:data/cod1/env.txt holds NAME=value lines
- * (the diagnostics read environment variables). */
+#define COD_ENV_FILE "ux0:data/cod1/env.txt"
+#else
+#define COD_ENV_FILE "sdmc:/switch/cod1/env.txt"
+#endif
+/* No environment on the consoles: env.txt holds NAME=value lines (the
+ * diagnostics read environment variables). */
 static void load_env_file(void)
 {
-    FILE *f = fopen("ux0:data/cod1/env.txt", "r");
+    FILE *f = fopen(COD_ENV_FILE, "r");
     if (!f)
         return;
     char line[512];
@@ -414,9 +419,44 @@ static void load_env_file(void)
 }
 #endif
 
+#if defined(__SWITCH__)
+static int cod_main(int argc, char **argv);
+
+/* The main thread of a homebrew app has a small stack and the generated code
+ * nests one C frame per guest call: the game runs on a thread of its own with a
+ * desktop-sized stack. */
+typedef struct MainArgs {
+    int argc;
+    char **argv;
+    int ret;
+} MainArgs;
+
+static void *cod_main_thread(void *p)
+{
+    MainArgs *a = p;
+    a->ret = cod_main(a->argc, a->argv);
+    return NULL;
+}
+
 int main(int argc, char **argv)
 {
-#if defined(__vita__)
+    MainArgs a = { argc, argv, 0 };
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 8u * 1024u * 1024u);
+    pthread_t t;
+    if (pthread_create(&t, &attr, cod_main_thread, &a) != 0)
+        return cod_main(argc, argv);
+    pthread_join(t, NULL);
+    return a.ret;
+}
+
+static int cod_main(int argc, char **argv)
+#else
+int main(int argc, char **argv)
+#endif
+{
+#if defined(__vita__) || defined(__SWITCH__)
     load_env_file();
 #endif
     const char *dir = getenv("COD_DIR");
@@ -426,6 +466,10 @@ int main(int argc, char **argv)
     if (!dir)
         dir = "ux0:data/cod1/pc";
     log_file = fopen("ux0:data/cod1/cod1.log", "w");
+#elif defined(__SWITCH__)
+    if (!dir)
+        dir = "sdmc:/switch/cod1/pc";
+    log_file = fopen("sdmc:/switch/cod1/cod1.log", "w");
 #else
     if (!dir)
         dir = ".";

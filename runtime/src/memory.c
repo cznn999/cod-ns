@@ -5,14 +5,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(__vita__)
+#if defined(__vita__) || defined(__SWITCH__)
 #include <malloc.h>
+#include <string.h>
+#endif
+#if defined(__vita__)
 /* newlib heap: the guest address space (160 MiB) plus host allocations (thread
  * stacks, the shader compiler, the renderer's buffers); textures live in vitaGL's
  * pools. With the extended memory mode (ATTRIBUTE2=12 in param.sfo); the rest of
  * it is vitaGL's. */
 int _newlib_heap_size_user = 256 * 1024 * 1024;
-#else
+#elif !defined(__SWITCH__)
 #include <sys/mman.h>
 #endif
 
@@ -29,6 +32,22 @@ void mem_init(void)
     }
     /* All of it: fresh Windows memory (VirtualAlloc, a new process's heap) reads as
      * zeros and the game relies on it, as on the desktop (mmap). */
+    memset(g_mem, 0, g_guest_mem_size);
+#elif defined(__SWITCH__)
+    /* No mmap in libnx: one block from the newlib heap, as on the Vita. Started
+     * from the HOME menu over a game (title takeover) the heap has about 3 GiB;
+     * from the album (applet mode) a few hundred MiB, so smaller sizes are tried
+     * too (kernel32.c then lowers com_hunkMegs). */
+    static const uint32_t sizes[] = { 0x20000000u, 0x10000000u, 0x0C000000u };   /* 512, 256, 192 MiB */
+    for (unsigned i = 0; i < sizeof(sizes) / sizeof(sizes[0]) && !g_mem; i++) {
+        g_guest_mem_size = sizes[i];
+        g_mem = memalign(4096, g_guest_mem_size);
+    }
+    if (!g_mem) {
+        fprintf(stderr, "cannot allocate guest memory\n");
+        exit(1);
+    }
+    /* Fresh Windows memory reads as zeros and the game relies on it. */
     memset(g_mem, 0, g_guest_mem_size);
 #else
     g_guest_mem_size = 0x40000000u;   /* 1 GiB, committed lazily by the OS */
@@ -51,6 +70,8 @@ uint32_t mem_heap_limit(void) { return g_guest_mem_size; }
 
 #if defined(__vita__)
 #include <psp2/kernel/sysmem.h>
+#elif defined(__SWITCH__)
+#include <switch/kernel/svc.h>
 #endif
 
 /* Host memory budget in the log (Vita: newlib heap and the system's free memory). */
@@ -65,6 +86,12 @@ void mem_report(const char *where)
     rt_log("memory (%s): newlib %u KiB in use of %u KiB taken, %u KiB free in it; system free: main %u KiB, cdram %u KiB, phycont %u KiB",
            where, (unsigned)(mi.uordblks >> 10), (unsigned)(mi.arena >> 10), (unsigned)(mi.fordblks >> 10),
            (unsigned)(fm.size_user >> 10), (unsigned)(fm.size_cdram >> 10), (unsigned)(fm.size_phycont >> 10));
+#elif defined(__SWITCH__)
+    u64 total = 0, used = 0;
+    svcGetInfo(&total, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
+    svcGetInfo(&used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
+    rt_log("memory (%s): %u MiB used of %u MiB, guest space %u MiB", where, (unsigned)(used >> 20),
+           (unsigned)(total >> 20), g_guest_mem_size >> 20);
 #else
     (void)where;
 #endif

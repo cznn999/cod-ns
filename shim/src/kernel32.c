@@ -1228,6 +1228,22 @@ void kernel32_init(void)
     } else {
         args = "+set com_hunkMegs 96 +set r_flares 0";
     }
+#elif defined(__SWITCH__)
+    /* sdmc:/switch/cod1/args.txt, else: the flares off (their occlusion test reads
+     * the depth buffer back every frame) and, with a small guest space (started
+     * from the album), a smaller hunk. */
+    static char file_args[512];
+    FILE *af = fopen("sdmc:/switch/cod1/args.txt", "r");
+    if (af) {
+        if (fgets(file_args, sizeof(file_args), af))
+            file_args[strcspn(file_args, "\r\n")] = 0;
+        fclose(af);
+        args = file_args;
+    } else if (g_guest_mem_size < 0x20000000u) {
+        args = "+set com_hunkMegs 96 +set r_flares 0";
+    } else {
+        args = "+set r_flares 0";
+    }
 #endif
     char line[1024];
     snprintf(line, sizeof(line), "\"" WIN_INSTALL_DIR "\\CoDSP.exe\" %s", args ? args : "");
@@ -1236,6 +1252,15 @@ void kernel32_init(void)
     env_block_w = scratch_alloc(4, 4);
     for (int i = 0; i < 3; i++)
         std_handles[i] = handle_new(H_STD);
+#if defined(__SWITCH__)
+    /* The parent directory without "..", which the SD card's paths do not take. */
+    if (!g_cd_dir[0]) {
+        snprintf(g_cd_dir, sizeof(g_cd_dir), "%s", g_game_dir);
+        char *slash = strrchr(g_cd_dir, '/'), *colon = strchr(g_cd_dir, ':');
+        if (slash && (!colon || slash > colon + 1))
+            *slash = 0;
+    }
+#endif
     if (!g_cd_dir[0])
         if (snprintf(g_cd_dir, sizeof(g_cd_dir), "%.1000s/..", g_game_dir) >= (int)sizeof(g_cd_dir))
             g_cd_dir[0] = 0;

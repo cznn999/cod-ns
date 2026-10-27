@@ -72,10 +72,14 @@ void platform_scripted_input(void)
     if (!init) {
         init = 1;
         script = getenv("COD_INPUT");
-#if defined(__vita__)
-        /* No environment on the Vita: read the script from a file. */
+#if defined(__vita__) || defined(__SWITCH__)
+        /* No environment on the consoles: read the script from a file. */
         static char buf[4096];
+#if defined(__vita__)
         FILE *f = fopen("ux0:data/cod1/input.txt", "r");
+#else
+        FILE *f = fopen("sdmc:/switch/cod1/input.txt", "r");
+#endif
         if (f) {
             size_t n = fread(buf, 1, sizeof(buf) - 1, f);
             buf[n] = 0;

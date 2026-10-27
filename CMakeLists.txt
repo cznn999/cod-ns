@@ -54,6 +54,12 @@ if(DEFINED VITA_ELF_CREATE)
     add_link_options(-Wl,-q -Wl,--gc-sections -static -fno-short-enums -Wl,--no-warn-mismatch -Wl,-z,noexecstack)
 endif()
 
+if(NINTENDO_SWITCH)
+    # Nintendo Switch (devkitPro: -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake).
+    # The toolchain file adds -march=armv8-a+crc+crypto -mtune=cortex-a57 and -D__SWITCH__.
+    set(SWITCH TRUE)
+endif()
+
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(GEN_DIR "${CMAKE_BINARY_DIR}/gen")
 file(GLOB RECOMP_TOOLS "${CMAKE_SOURCE_DIR}/tools/recomp/*.py")
@@ -101,9 +107,11 @@ endif()
 file(GLOB RUNTIME_SOURCES CONFIGURE_DEPENDS runtime/src/*.c)
 file(GLOB SHIM_SOURCES CONFIGURE_DEPENDS shim/src/*.c)
 if(VITA)
-    list(FILTER SHIM_SOURCES EXCLUDE REGEX "platform_sdl\\.c$")
+    list(FILTER SHIM_SOURCES EXCLUDE REGEX "platform_(sdl|switch)\\.c$|gl_switch\\.c$")
+elseif(SWITCH)
+    list(FILTER SHIM_SOURCES EXCLUDE REGEX "platform_(sdl|vita)\\.c$")
 else()
-    list(FILTER SHIM_SOURCES EXCLUDE REGEX "platform_vita\\.c$")
+    list(FILTER SHIM_SOURCES EXCLUDE REGEX "platform_(vita|switch)\\.c$|gl_switch\\.c$")
 endif()
 
 add_executable(cod1 ${RUNTIME_SOURCES} ${SHIM_SOURCES})
@@ -149,6 +157,25 @@ if(VITA)
         VERSION ${VITA_VERSION}
         NAME "Call of Duty"
         FILE ${COD_SCE_SYS} sce_sys)
+elseif(SWITCH)
+    # SDL2 (switch-sdl2) for the window, the GL context (EGL) and audio; Mesa's
+    # desktop OpenGL (switch-mesa: EGL, glapi, drm_nouveau) for the renderer.
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SDL2 REQUIRED IMPORTED_TARGET sdl2)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(cod1 PRIVATE cod_recomp PkgConfig::SDL2 OpenGL::GL m)
+    # Mesa (libEGL.a) is C++ and the executable is linked as C: libstdc++ has to
+    # come after Mesa on the link line. A library listed here would be merged
+    # with the one SDL2's pkg-config already puts before Mesa, so it goes at the
+    # very end, with the platform's own libraries (-lnx -lm).
+    set(CMAKE_C_STANDARD_LIBRARIES "-lstdc++ ${CMAKE_C_STANDARD_LIBRARIES}")
+    set(COD_SWITCH_ICON "${CMAKE_SOURCE_DIR}/platform/switch/icon.jpg")
+    nx_generate_nacp(cod1.nacp NAME "Call of Duty NS" AUTHOR "cod-vita / Switch port" VERSION "${COD_PORT_VERSION}")
+    if(EXISTS "${COD_SWITCH_ICON}")
+        nx_create_nro(cod1 NACP cod1.nacp ICON "${COD_SWITCH_ICON}")
+    else()
+        nx_create_nro(cod1 NACP cod1.nacp)
+    endif()
 else()
     find_package(SDL2 REQUIRED)
     find_package(OpenGL REQUIRED)

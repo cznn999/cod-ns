@@ -1,5 +1,5 @@
 /* SDL2 implementation of the platform layer (desktop). */
-#if !defined(__vita__)
+#if !defined(__vita__) && !defined(__SWITCH__)
 #include "platform.h"
 #include "bench.h"
 #include "runtime.h"

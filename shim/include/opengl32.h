@@ -7,6 +7,8 @@
 
 #if defined(__vita__)
 #include <vitaGL.h>
+#elif defined(__SWITCH__)
+#include "gl_switch.h"
 #elif defined(__APPLE__)
 #include <OpenGL/gl.h>
 #include <OpenGL/glext.h>
