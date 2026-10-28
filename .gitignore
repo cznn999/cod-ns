@@ -1,5 +1,6 @@
 # Retail game data and anything derived from it never goes into the repo.
-/gamedata/
+/gamedata/*
+!/gamedata/README.md
 /build*/
 *.log
 __pycache__/
