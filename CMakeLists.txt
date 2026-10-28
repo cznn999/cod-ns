@@ -15,7 +15,7 @@ endif()
 
 # The recompiled code is generated from the user's own copy of the game: the
 # single-player executable and the three game DLLs it loads.
-set(COD_DIR "${CMAKE_SOURCE_DIR}/gamedata/pc" CACHE PATH "Game directory (CoDSP.exe, gamex86.dll, cgamex86.dll, uix86.dll)")
+set(COD_DIR "${CMAKE_SOURCE_DIR}/gamedata" CACHE PATH "Game directory (CoDSP.exe, gamex86.dll, cgamex86.dll, uix86.dll)")
 # cod: Call of Duty (CoDSP.exe 1.3); uo: United Offensive (CoDUOSP.exe and uo_*.dll).
 set(COD_GAME "cod" CACHE STRING "Game to recompile: cod or uo")
 set_property(CACHE COD_GAME PROPERTY STRINGS cod uo)

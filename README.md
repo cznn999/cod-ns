@@ -15,7 +15,7 @@ build time and compiled for the Switch's ARM CPU: no emulator runs on the consol
 
 ## Installing
 Download the newest build from **releases** <br>
-Put the **cod1.nro** in **/switch/**
+Put **cod1.nro** (Call of Duty) and **cod1uo.nro** (United Offensive) in **/switch/**
 ```
 SD:/switch/
 ├── cod1.nro          <- Call of Duty
@@ -78,6 +78,9 @@ The right stick's speed follows the game's own mouse sensitivity
 - A Switch that can run homebrew
 - Call of Duty from **Steam**. `CoDSP.exe` must be version 1.3 without copy
   protection; `tools/check_game_files.py` checks this for you.
+- For United Offensive (optional): United Offensive from **Steam**, installed in the
+  same folder (`CoDUOSP.exe`, the `uo_*.dll` files and `uo/`). The same script checks
+  it when it finds `CoDUOSP.exe`.
 - [devkitPro](https://devkitpro.org/wiki/Getting_Started) with these packages:
   ```sh
   dkp-pacman -S switch-dev switch-sdl2 switch-mesa switch-libdrm_nouveau switch-pkg-config switch-tools
@@ -88,42 +91,64 @@ The right stick's speed follows the game's own mouse sensitivity
 
 ## Building
 
-**1. Check your game files**
+**1. Get the code and put the game in place**
 
-```sh
-python3 tools/check_game_files.py "/path/to/Call of Duty"
+Clone the repository, or download it as a ZIP from GitHub and extract it. Check that
+`CMakeLists.txt` sits directly in the folder you extracted (Windows sometimes adds a
+second folder level, e.g. `cod-nx-main\cod-nx-main`).
+
+Then copy the **contents** of your game folder into `gamedata` inside the project,
+so that `CoDSP.exe` ends up as `gamedata/CoDSP.exe`:
+
+```
+cod-nx/
+├── CMakeLists.txt
+├── runtime/  shim/  tools/ ...
+└── gamedata/
+    ├── CoDSP.exe
+    ├── gamex86.dll, cgamex86.dll, uix86.dll
+    ├── main/
+    └── CoDUOSP.exe, uo_*.dll, uo/     (United Offensive)
 ```
 
-Every line should say `OK`. `PROTECTED` or `WRONG VERSION` means that executable
-cannot be recompiled.
+`gamedata` is where the build looks by default, and Git ignores `gamedata/`, so the
+game files can never be committed by accident. (A game folder elsewhere works too:
+add `-DCOD_DIR="/path/to/Call of Duty"` to the `cmake -S` commands below.)
 
-**2. Configure and build**
+Optional: 256×256 baseline JPEG icons in `platform/switch/`: `icon.jpg` for Call of
+Duty, `icon_uo.jpg` for United Offensive.
+
+**2. Check your game files**
 
 ```sh
-cmake -S . -B build-switch -G Ninja \
+python3 tools/check_game_files.py gamedata
+python3 tools/inspect_game.py gamedata
+```
+
+`check_game_files.py` checks Call of Duty and, when `CoDUOSP.exe` is there, United
+Offensive: every line should say `OK`, and it ends with `ready to build.` for each
+game found. `PROTECTED` (encrypted code) or `WRONG VERSION` means that executable
+cannot be recompiled. `inspect_game.py` lists both games'
+files and whether their code can be recompiled.
+
+**3. Build**
+
+From the project folder. Each line starts with `cd ... &&`, so nothing is built if the
+folder is wrong:
+
+```sh
+cd /path/to/cod-nx && cmake -S . -B build-switch -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake && cmake --build build-switch
+
+cd /path/to/cod-nx && cmake -S . -B build-uo -G Ninja \
       -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
-      -DCOD_DIR="/path/to/Call of Duty"
-cmake --build build-switch
+      -DCOD_GAME=uo && cmake --build build-uo
 ```
 
-The result is `build-switch/cod1.nro`. The first build takes a while: the
-recompiler turns about 12,700 of the game's functions into C.
-
-**3. United Offensive**
-
-The same, in a build directory of its own and with `-DCOD_GAME=uo` (the game folder
-must hold `CoDUOSP.exe`, the `uo_*.dll` files and `uo/`):
-
-```sh
-cmake -S . -B build-uo -G Ninja \
-      -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
-      -DCOD_DIR="/path/to/Call of Duty" \
-      -DCOD_GAME=uo
-cmake --build build-uo
-```
-
-The result is `build-uo/cod1uo.nro`. `python3 tools/inspect_game.py "/path/to/Call of Duty"`
-lists both games' files and whether their code can be recompiled.
+The results are `build-switch/cod1.nro` (Call of Duty) and `build-uo/cod1uo.nro`
+(United Offensive). The first build of each takes a while: the recompiler turns about
+12,700 of the game's functions into C. Icons are picked up when CMake configures, so
+after adding one run `cmake build-switch` (or `cmake build-uo`) before building again.
 
 <details>
 <summary>Windows (devkitPro MSYS2) with Python from python.org</summary>
@@ -136,22 +161,25 @@ py -m pip install capstone
 py -c "import sys; print(sys.executable)"
 ```
 
-Then in the MSYS2 shell, with the path printed above:
+Then in the MSYS2 shell, with the path printed above (here the project is in
+`X:\cod-nx-main`, which is `/x/cod-nx-main` in MSYS2):
 
 ```sh
 PY="$(cygpath -u 'C:\Users\you\AppData\Local\Programs\Python\Python314\python.exe')"
-cmake -S . -B build-switch -G Ninja \
+
+cd /x/cod-nx-main && cmake -S . -B build-switch -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
+      -DPython3_EXECUTABLE="$PY" && cmake --build build-switch
+
+cd /x/cod-nx-main && cmake -S . -B build-uo -G Ninja \
       -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
       -DPython3_EXECUTABLE="$PY" \
-      -DCOD_DIR="/x/games/Call of Duty"
-cmake --build build-switch
+      -DCOD_GAME=uo && cmake --build build-uo
 ```
 
-(`X:\games` is `/x/games` in MSYS2.)
+`PY` lasts until the MSYS2 window is closed; to keep it, add the `PY=...` line to
+`~/.bashrc`.
 </details>
-
-Optional: put a 256×256 `platform/switch/icon.jpg` in place before configuring to
-give the `.nro` an icon.
 
 ## Settings
 
