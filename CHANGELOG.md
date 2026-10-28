@@ -1,11 +1,10 @@
 # Changelog
 
-## Call of Duty NX 0.30
+## Call of Duty NX 0.30 / Call of Duty UO NX 0.20
 
-- Fixed saving: every save after the first one failed with "Insufficient free disk
-  space", and the save at the end of a level crashed the game (e.g. at the door at
-  the end of the first Stalingrad mission). The same fix applies to United
-  Offensive when it is rebuilt from this version of the code.
+- Fixed saving in both games: every save after the first one failed with
+  "Insufficient free disk space", and the save at the end of a level crashed the
+  game (e.g. at the door at the end of the first Stalingrad mission).
 
 ## Call of Duty NX 0.21 / Call of Duty UO NX 0.10
 

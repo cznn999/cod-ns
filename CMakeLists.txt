@@ -50,7 +50,7 @@ endforeach()
 # Version of the port, separate for each game (shown in hbmenu as major.minor+patch,
 # e.g. 0.2.1 as 0.21).
 if(COD_GAME STREQUAL "uo")
-    set(COD_PORT_VERSION "0.1.0")
+    set(COD_PORT_VERSION "0.2.0")
 else()
     set(COD_PORT_VERSION "0.3.0")
 endif()
