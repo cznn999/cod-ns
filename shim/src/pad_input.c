@@ -135,9 +135,8 @@ static void output(uint8_t kind, uint8_t code, int down)
     }
 }
 
-/* cls.keyCatchers of CoDSP.exe: who takes the keys (console, UI, message mode);
- * 0 while the game is played. */
-#define COD_KEY_CATCHERS 0x01439264u
+/* cls.keyCatchers (COD_KEY_CATCHERS, game.h): who takes the keys (console, UI,
+ * message mode); 0 while the game is played. */
 
 int pad_in_gameplay(void)
 {

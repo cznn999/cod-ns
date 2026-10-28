@@ -55,7 +55,7 @@ static void msvcrt_init_data(void)
     host_files[1] = stdout;
     host_files[2] = stderr;
     acmdln_var = scratch_alloc(4, 4);
-    WR32(acmdln_var, scratch_strdup("CoDSP.exe"));
+    WR32(acmdln_var, scratch_strdup(COD_EXE_NAME));
     fmode_var = scratch_alloc(4, 4);
     commode_var = scratch_alloc(4, 4);
     adjust_fdiv_var = scratch_alloc(4, 4);
@@ -109,7 +109,7 @@ SHIM(msvcrt, __p__commode) { msvcrt_init_data(); cdecl_ret(c, commode_var); }
 SHIM(msvcrt, __getmainargs)
 {
     uint32_t argv = scratch_alloc(8, 4);
-    WR32(argv, scratch_strdup("CoDSP.exe"));
+    WR32(argv, scratch_strdup(COD_EXE_NAME));
     uint32_t envp = scratch_alloc(4, 4);
     WR32(ARG(0), 1);
     WR32(ARG(1), argv);

@@ -190,7 +190,7 @@ SHIM(kernel32, GetModuleFileNameA)
     uint32_t mod = ARG(0), buf = ARG(1), size = ARG(2);
     int m = mod ? module_by_base(mod) : 0;
     char path[300];
-    snprintf(path, sizeof(path), WIN_INSTALL_DIR "\\%s", m > 0 ? g_guest_modules[m].name : "CoDSP.exe");
+    snprintf(path, sizeof(path), WIN_INSTALL_DIR "\\%s", m > 0 ? g_guest_modules[m].name : COD_EXE_NAME);
     uint32_t n = (uint32_t)strlen(path);
     if (n >= size)
         n = size ? size - 1u : 0u;
@@ -1236,7 +1236,7 @@ void kernel32_init(void)
      * (started from the album), a smaller hunk; the logo videos at start-up are
      * skipped (com_introplayed). */
     static char file_args[512];
-    FILE *af = fopen("sdmc:/switch/cod1/args.txt", "r");
+    FILE *af = fopen("sdmc:/switch/cod1/args" COD_SW_TAG ".txt", "r");
     if (af) {
         if (fgets(file_args, sizeof(file_args), af))
             file_args[strcspn(file_args, "\r\n")] = 0;
@@ -1249,7 +1249,7 @@ void kernel32_init(void)
     }
 #endif
     char line[1024];
-    snprintf(line, sizeof(line), "\"" WIN_INSTALL_DIR "\\CoDSP.exe\" %s", args ? args : "");
+    snprintf(line, sizeof(line), "\"" WIN_INSTALL_DIR "\\" COD_EXE_NAME "\" %s", args ? args : "");
     cmdline = scratch_strdup(line);
     env_block = scratch_alloc(4, 4);
     env_block_w = scratch_alloc(4, 4);

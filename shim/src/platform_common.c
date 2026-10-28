@@ -78,7 +78,7 @@ void platform_scripted_input(void)
 #if defined(__vita__)
         FILE *f = fopen("ux0:data/cod1/input.txt", "r");
 #else
-        FILE *f = fopen("sdmc:/switch/cod1/input.txt", "r");
+        FILE *f = fopen("sdmc:/switch/cod1/input" COD_SW_TAG ".txt", "r");
 #endif
         if (f) {
             size_t n = fread(buf, 1, sizeof(buf) - 1, f);

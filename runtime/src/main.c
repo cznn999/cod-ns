@@ -397,7 +397,7 @@ void rt_probe(Ctx *c, uint32_t func)
 #if defined(__vita__)
 #define COD_ENV_FILE "ux0:data/cod1/env.txt"
 #else
-#define COD_ENV_FILE "sdmc:/switch/cod1/env.txt"
+#define COD_ENV_FILE "sdmc:/switch/cod1/env" COD_SW_TAG ".txt"
 #endif
 /* No environment on the consoles: env.txt holds NAME=value lines (the
  * diagnostics read environment variables). */
@@ -469,7 +469,7 @@ int main(int argc, char **argv)
 #elif defined(__SWITCH__)
     if (!dir)
         dir = "sdmc:/switch/cod1/pc";
-    log_file = fopen("sdmc:/switch/cod1/cod1.log", "w");
+    log_file = fopen("sdmc:/switch/cod1/cod1" COD_SW_TAG ".log", "w");
 #else
     if (!dir)
         dir = ".";

@@ -22,7 +22,7 @@
 #include <switch.h>
 #include <unistd.h>
 
-#define COD_SWITCH_CFG "sdmc:/switch/cod1/cod1.cfg"
+#define COD_SWITCH_CFG "sdmc:/switch/cod1/cod1" COD_SW_TAG ".cfg"
 
 /* The touch screen's resolution (handheld). */
 #define TOUCH_W 1280

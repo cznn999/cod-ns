@@ -14,7 +14,7 @@ import sys
 EXPECTED_TIMESTAMP = 0x40443FDA
 REQUIRED = ["CoDSP.exe", "gamex86.dll", "cgamex86.dll", "uix86.dll"]
 # Section names left in executables wrapped by SafeDisc (their code is encrypted on disk).
-SAFEDISC_SECTIONS = {".stxt774", ".stxt371"}
+SAFEDISC_SECTIONS = {".stxt774", ".stxt371", "stxt774", "stxt371"}
 
 
 def pe_info(path):

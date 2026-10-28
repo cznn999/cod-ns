@@ -1,12 +1,13 @@
 # Call of Duty (2003) for Nintendo Switch
 
-A native Nintendo Switch port of the single-player campaign of **Call of Duty**
-(Infinity Ward, 2003), built on [cod-vita](https://github.com/HenryKun55/cod-vita)'s
+A native Nintendo Switch port of the single-player campaigns of **Call of Duty**
+(Infinity Ward, 2003) and its expansion **United Offensive** (Gray Matter, 2004), built on [cod-vita](https://github.com/HenryKun55/cod-vita)'s
 static recompilation of the PC game. The game's x86 code is translated to C at
 build time and compiled for the Switch's ARM CPU: no emulator runs on the console.
 
 > [!IMPORTANT]
-> **You need your own copy of the game from [Steam](https://store.steampowered.com/app/2620/).**
+> **You need your own copy of the game from [Steam](https://store.steampowered.com/app/2620/)**
+> (and of [United Offensive](https://store.steampowered.com/app/2640/) for the expansion).
 > This repository contains no game code or data. The build recompiles *your*
 > `CoDSP.exe` and game DLLs, and the game reads its data from your installation.
 > The retail CD version cannot be used: its executable is encrypted by SafeDisc,
@@ -17,18 +18,27 @@ Download the newest build from **releases** <br>
 Put the **cod1.nro** in **/switch/**
 ```
 SD:/switch/
-├── cod1.nro
+├── cod1.nro          <- Call of Duty
+├── cod1uo.nro        <- United Offensive
 └── cod1/
     └── pc/            <- everything from your game folder, you may delete CoDMP.exe/CoDUOMP.exe to save some space
         ├── CoDSP.exe
         ├── gamex86.dll
         ├── cgamex86.dll
         ├── uix86.dll
-        └── main/
+        ├── main/
+        ├── CoDUOSP.exe    <- United Offensive: its exe, uo_*.dll and uo/
+        ├── uo_gamex86.dll
+        ├── uo_cgamex86.dll
+        ├── uo_uix86.dll
+        └── uo/
 ```
 
+Both games share the `pc` folder; United Offensive's own files on the card are named
+with `_uo` (`cod1_uo.log`, `args_uo.txt`, `env_uo.txt`, `cod1_uo.cfg`).
+
 **Start it with title takeover**: hold **R** while launching any game from the HOME
-menu, then pick `cod1.nro` in hbmenu. That gives the port the full ~3 GB of RAM.
+menu, then pick `cod1.nro` or `cod1uo.nro` in hbmenu. That gives the port the full ~3 GB of RAM.
 Applet mode is not supported.
 
 ## Status
@@ -37,8 +47,8 @@ Applet mode is not supported.
 - 720p handheld, 1080p docked (switches when you dock or undock).
 - The brightness slider works as on the PC (the port applies the game's gamma ramp).
 - The logo videos at start-up are skipped; the cutscenes between missions play.
+- United Offensive (`cod1uo.nro`) is supported; its Bink videos are skipped for now.
 - Performance work is in progress.
-- United Offensive is not supported yet.
 
 ## Controls
 
@@ -98,6 +108,22 @@ cmake --build build-switch
 
 The result is `build-switch/cod1.nro`. The first build takes a while: the
 recompiler turns about 12,700 of the game's functions into C.
+
+**3. United Offensive**
+
+The same, in a build directory of its own and with `-DCOD_GAME=uo` (the game folder
+must hold `CoDUOSP.exe`, the `uo_*.dll` files and `uo/`):
+
+```sh
+cmake -S . -B build-uo -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE=$DEVKITPRO/cmake/Switch.cmake \
+      -DCOD_DIR="/path/to/Call of Duty" \
+      -DCOD_GAME=uo
+cmake --build build-uo
+```
+
+The result is `build-uo/cod1uo.nro`. `python3 tools/inspect_game.py "/path/to/Call of Duty"`
+lists both games' files and whether their code can be recompiled.
 
 <details>
 <summary>Windows (devkitPro MSYS2) with Python from python.org</summary>

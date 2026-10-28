@@ -1248,7 +1248,7 @@ static void frame_times(void)
     last = now;
     /* Played: no menu or console (keyCatchers 0, also true during videos), cls.state
      * active (2; 3 is a full-screen video) and not a loading screen's long frame. */
-    int play = pad_in_gameplay() && RD32(0x01439260u) == 2u && us < 1000000u;
+    int play = pad_in_gameplay() && RD32(COD_CLS_STATE) == 2u && us < 1000000u;
 #ifdef COD_PROFILE
     if (prof_mode > 0)
         rt_prof_frame_end(play && (prof_mode == 1 || us > 50000u));

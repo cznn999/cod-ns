@@ -16,20 +16,44 @@ endif()
 # The recompiled code is generated from the user's own copy of the game: the
 # single-player executable and the three game DLLs it loads.
 set(COD_DIR "${CMAKE_SOURCE_DIR}/gamedata/pc" CACHE PATH "Game directory (CoDSP.exe, gamex86.dll, cgamex86.dll, uix86.dll)")
-foreach(f CoDSP.exe gamex86.dll cgamex86.dll uix86.dll)
+# cod: Call of Duty (CoDSP.exe 1.3); uo: United Offensive (CoDUOSP.exe and uo_*.dll).
+set(COD_GAME "cod" CACHE STRING "Game to recompile: cod or uo")
+set_property(CACHE COD_GAME PROPERTY STRINGS cod uo)
+if(COD_GAME STREQUAL "uo")
+    set(COD_GAME_FILES CoDUOSP.exe uo_gamex86.dll uo_cgamex86.dll uo_uix86.dll)
+    # Packed after CoDUOSP.exe's image (0x00400000-0x0492A000), below the thunks at
+    # 0x05200000 (runtime/include/game.h).
+    set(COD_MODULES
+        "${COD_DIR}/CoDUOSP.exe"
+        "${COD_DIR}/uo_gamex86.dll@04930000"
+        "${COD_DIR}/uo_cgamex86.dll@04C60000"
+        "${COD_DIR}/uo_uix86.dll@04FC0000")
+    add_compile_definitions(COD_GAME_UO)
+elseif(COD_GAME STREQUAL "cod")
+    set(COD_GAME_FILES CoDSP.exe gamex86.dll cgamex86.dll uix86.dll)
+    # Packed after CoDSP.exe's image (0x00400000-0x01864000), below the thunks at
+    # 0x02000000 (runtime/include/game.h).
+    set(COD_MODULES
+        "${COD_DIR}/CoDSP.exe"
+        "${COD_DIR}/gamex86.dll@01870000"
+        "${COD_DIR}/cgamex86.dll@01B60000"
+        "${COD_DIR}/uix86.dll@01DE0000")
+else()
+    message(FATAL_ERROR "COD_GAME must be cod or uo")
+endif()
+foreach(f ${COD_GAME_FILES})
     if(NOT EXISTS "${COD_DIR}/${f}")
         message(FATAL_ERROR "${f} not found in ${COD_DIR}; pass -DCOD_DIR=/path/to/the/game")
     endif()
 endforeach()
-# Guest bases of the DLLs: packed after CoDSP.exe's image (0x00400000-0x01864000),
-# below the thunks at 0x02000000 (runtime/include/runtime.h).
-set(COD_MODULES
-    "${COD_DIR}/CoDSP.exe"
-    "${COD_DIR}/gamex86.dll@01870000"
-    "${COD_DIR}/cgamex86.dll@01B60000"
-    "${COD_DIR}/uix86.dll@01DE0000")
 
-set(COD_PORT_VERSION "0.1.0")
+# Version of the port, separate for each game (shown in hbmenu as major.minor+patch,
+# e.g. 0.2.1 as 0.21).
+if(COD_GAME STREQUAL "uo")
+    set(COD_PORT_VERSION "0.1.0")
+else()
+    set(COD_PORT_VERSION "0.2.1")
+endif()
 if(NOT COD_PORT_VERSION MATCHES "^([0-9]+)\\.([0-9])\\.([0-9])$")
     message(FATAL_ERROR "COD_PORT_VERSION must be major.minor.patch with one-digit minor and patch")
 endif()
@@ -38,6 +62,7 @@ if(COD_VERSION_MAJOR LESS 10)
     set(COD_VERSION_MAJOR "0${COD_VERSION_MAJOR}")
 endif()
 set(COD_APP_VER "${COD_VERSION_MAJOR}.${CMAKE_MATCH_2}${CMAKE_MATCH_3}")
+set(COD_SHORT_VER "${CMAKE_MATCH_1}.${CMAKE_MATCH_2}${CMAKE_MATCH_3}")
 
 if(DEFINED VITA_ELF_CREATE)
     # PlayStation Vita (vitasdk toolchain file).
@@ -63,8 +88,8 @@ endif()
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(GEN_DIR "${CMAKE_BINARY_DIR}/gen")
 file(GLOB RECOMP_TOOLS "${CMAKE_SOURCE_DIR}/tools/recomp/*.py")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${RECOMP_TOOLS}
-    "${COD_DIR}/CoDSP.exe" "${COD_DIR}/gamex86.dll" "${COD_DIR}/cgamex86.dll" "${COD_DIR}/uix86.dll")
+list(TRANSFORM COD_GAME_FILES PREPEND "${COD_DIR}/" OUTPUT_VARIABLE COD_GAME_PATHS)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${RECOMP_TOOLS} ${COD_GAME_PATHS})
 # Diagnostic entry probes (hex guest addresses), e.g. -DCOD_PROBES="452190 4521B6".
 set(COD_PROBES "" CACHE STRING "Guest functions to instrument with rt_probe")
 
@@ -170,7 +195,17 @@ elseif(SWITCH)
     # very end, with the platform's own libraries (-lnx -lm).
     set(CMAKE_C_STANDARD_LIBRARIES "-lstdc++ ${CMAKE_C_STANDARD_LIBRARIES}")
     set(COD_SWITCH_ICON "${CMAKE_SOURCE_DIR}/platform/switch/icon.jpg")
-    nx_generate_nacp(cod1.nacp NAME "Call of Duty NS" AUTHOR "cod-vita / Switch port" VERSION "${COD_PORT_VERSION}")
+    if(COD_GAME STREQUAL "uo")
+        set(COD_SWITCH_NAME "Call of Duty UO NS")
+        # cod1uo.elf and cod1uo.nro (the NRO is named after the executable).
+        set_target_properties(cod1 PROPERTIES OUTPUT_NAME cod1uo)
+        if(EXISTS "${CMAKE_SOURCE_DIR}/platform/switch/icon_uo.jpg")
+            set(COD_SWITCH_ICON "${CMAKE_SOURCE_DIR}/platform/switch/icon_uo.jpg")
+        endif()
+    else()
+        set(COD_SWITCH_NAME "Call of Duty NS")
+    endif()
+    nx_generate_nacp(cod1.nacp NAME "${COD_SWITCH_NAME}" AUTHOR "cod-vita / Switch port" VERSION "${COD_SHORT_VER}")
     if(EXISTS "${COD_SWITCH_ICON}")
         nx_create_nro(cod1 NACP cod1.nacp ICON "${COD_SWITCH_ICON}")
     else()

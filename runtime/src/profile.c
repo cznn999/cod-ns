@@ -31,7 +31,7 @@ typedef int profile_translation_unit_is_not_empty;
 #elif defined(__SWITCH__)
 #include <pthread.h>
 #include <unistd.h>
-#define PROFILE_PATH "sdmc:/switch/cod1/profile.txt"
+#define PROFILE_PATH "sdmc:/switch/cod1/profile" COD_SW_TAG ".txt"
 #else
 #include <pthread.h>
 #include <unistd.h>
@@ -245,7 +245,7 @@ extern RtCallCount __start_cod_calls[], __stop_cod_calls[];
 #if defined(__vita__)
 #define CALLS_PATH "ux0:data/cod1/calls.txt"
 #elif defined(__SWITCH__)
-#define CALLS_PATH "sdmc:/switch/cod1/calls.txt"
+#define CALLS_PATH "sdmc:/switch/cod1/calls" COD_SW_TAG ".txt"
 #else
 #define CALLS_PATH "cod_calls.txt"
 #endif

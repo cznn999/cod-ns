@@ -3,6 +3,7 @@
 #define COD_RUNTIME_H
 
 #include "recomp.h"
+#include "game.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -11,18 +12,18 @@
 #define GUEST_NULL_GUARD   0x00010000u   /* [0, guard) is never mapped */
 #define GUEST_SCRATCH_BASE 0x00010000u   /* host-owned static structures (TIB, strings) */
 #define GUEST_SCRATCH_END  0x003FF000u
-#define GUEST_IMAGE_BASE   0x00400000u   /* CoDSP.exe: up to 0x01864000 */
+#define GUEST_IMAGE_BASE   0x00400000u   /* the exe: up to COD_IMAGE_END (game.h) */
 /* The game DLLs follow the exe (their bases are chosen in CMakeLists.txt, COD_MODULES)
- * and end below 0x02000000. */
-#define GUEST_STACK_BASE   0x02100000u
+ * and end below THUNK_BASE. */
+#define GUEST_STACK_BASE   COD_STACK_BASE
 #define GUEST_STACK_SIZE   0x00800000u
-#define GUEST_HEAP_BASE    0x03000000u
+#define GUEST_HEAP_BASE    COD_HEAP_BASE
 
 /* Host thunks: fake guest code addresses that dispatch to host functions. They
  * are inside the mapped guest space (between the modules and the stack): code
  * sometimes reads a few bytes at an imported function's address (a dead load),
  * which must not fault. */
-#define THUNK_BASE   0x02000000u
+#define THUNK_BASE   COD_THUNK_BASE
 #define THUNK_STRIDE 4u
 #define THUNK_MAX    8192u
 
