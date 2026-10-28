@@ -205,6 +205,12 @@ SHIM(kernel32, MoveFileA)
     win_path_to_host(gstr(ARG(1)), b, sizeof(b));
     make_parents(b);
     int ok = rename(a, b) == 0;
+    /* The game moves its new save (temp.svg, temp.psw) over the previous one. A
+     * POSIX rename replaces the target; the Switch's SD card file system does not
+     * (EEXIST), and the failed move made the game report a full disk and drop out
+     * at the end of a level: the target goes first, then the move again. */
+    if (!ok && errno == EEXIST && remove(b) == 0)
+        ok = rename(a, b) == 0;
     if (!ok)
         rt_log("MoveFileA(%s, %s): %s", a, b, strerror(errno));
     stdcall_ret(c, ok, 2);
