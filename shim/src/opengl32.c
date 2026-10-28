@@ -18,6 +18,9 @@
 #include <SDL.h>
 
 #include "pad_input.h"
+#if defined(__SWITCH__)
+#include "gamma_switch.h"
+#endif
 
 void user32_window_size(int *w, int *h);
 
@@ -1284,6 +1287,9 @@ static void present(void)
         g_gl_tracing = 1;
         rt_log("gl trace: next frame");
     }
+#if defined(__SWITCH__)
+    gamma_apply();   /* the brightness setting, as the PC's display ramp would */
+#endif
     if (shot_pending) {
         shot_pending = 0;
         save_shot();
@@ -1309,9 +1315,14 @@ SHIM(gdi32, SwapBuffers)
 }
 
 /* Gamma ramps: 3 x 256 WORDs. The game's brightness setting (r_gamma) goes
- * through them; identity until the host side applies them. */
+ * through them. The Switch applies them to every frame (gamma_switch.c); elsewhere
+ * they are not applied yet. GetDeviceGammaRamp reports the identity: the display's
+ * own ramp, which the game restores when it exits. */
 SHIM(gdi32, GetDeviceGammaRamp)
 {
+#if defined(__SWITCH__)
+    rt_log("gamma: GetDeviceGammaRamp (the game checks for a display ramp)");
+#endif
     uint32_t p = ARG(1);
     for (uint32_t k = 0; k < 3u; k++)
         for (uint32_t i = 0; i < 256u; i++)
@@ -1319,4 +1330,17 @@ SHIM(gdi32, GetDeviceGammaRamp)
     stdcall_ret(c, 1, 2);
 }
 
-SHIM(gdi32, SetDeviceGammaRamp) { stdcall_ret(c, 1, 2); }
+SHIM(gdi32, SetDeviceGammaRamp)
+{
+#if defined(__SWITCH__)
+    uint16_t ramp[768];
+    for (uint32_t i = 0; i < 768u; i++)
+        ramp[i] = RD16(ARG(1) + 2u * i);
+    static unsigned calls;
+    if (calls++ < 40u)
+        rt_log("gamma: SetDeviceGammaRamp #%u: red[32]=%04X red[64]=%04X red[128]=%04X red[255]=%04X", calls,
+               ramp[32], ramp[64], ramp[128], ramp[255]);
+    gamma_ramp_set(ramp);
+#endif
+    stdcall_ret(c, 1, 2);
+}

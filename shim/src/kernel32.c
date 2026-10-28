@@ -1230,8 +1230,11 @@ void kernel32_init(void)
     }
 #elif defined(__SWITCH__)
     /* sdmc:/switch/cod1/args.txt, else: the flares off (their occlusion test reads
-     * the depth buffer back every frame) and, with a small guest space (started
-     * from the album), a smaller hunk. */
+     * the depth buffer back every frame), the display gamma ramp on (the port
+     * applies it, gamma_switch.c; a config saved with r_ignorehwgamma 1 would draw
+     * the brightness into the textures instead) and, with a small guest space
+     * (started from the album), a smaller hunk; the logo videos at start-up are
+     * skipped (com_introplayed). */
     static char file_args[512];
     FILE *af = fopen("sdmc:/switch/cod1/args.txt", "r");
     if (af) {
@@ -1240,9 +1243,9 @@ void kernel32_init(void)
         fclose(af);
         args = file_args;
     } else if (g_guest_mem_size < 0x20000000u) {
-        args = "+set com_hunkMegs 96 +set r_flares 0";
+        args = "+set com_hunkMegs 96 +set r_flares 0 +set r_ignorehwgamma 0 +set com_introplayed 1";
     } else {
-        args = "+set r_flares 0";
+        args = "+set r_flares 0 +set r_ignorehwgamma 0 +set com_introplayed 1";
     }
 #endif
     char line[1024];

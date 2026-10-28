@@ -35,6 +35,8 @@ Applet mode is not supported.
 
 - Runs on real hardware: menus, missions, saves, music and voices.
 - 720p handheld, 1080p docked (switches when you dock or undock).
+- The brightness slider works as on the PC (the port applies the game's gamma ramp).
+- The logo videos at start-up are skipped; the cutscenes between missions play.
 - Performance work is in progress.
 - United Offensive is not supported yet.
 
@@ -131,7 +133,7 @@ All optional, all in `SD:/switch/cod1/`:
 
 | File | What it does |
 |---|---|
-| `args.txt` | The game's command line, e.g. `+set r_flares 0 +set com_hunkMegs 128`. Without it the port uses `+set r_flares 0`. |
+| `args.txt` | The game's command line, e.g. `+set r_flares 0 +set com_hunkMegs 128`. Without it the port uses `+set r_flares 0 +set r_ignorehwgamma 0 +set com_introplayed 1`; a file of your own replaces all of these. |
 | `cod1.cfg` | Controls, one per line: `stick_sensitivity=1.5`, `invert_y=1`, `touch=0`. |
 | `env.txt` | Port options, `NAME=value` per line (see below). |
 
@@ -146,6 +148,10 @@ Options for `env.txt`:
 
 The port writes `SD:/switch/cod1/cod1.log`, with the frame rate and the screen
 resolution every 10 seconds. Attach it to bug reports.
+
+For performance work, a build configured with `-DCOD_PROFILE=ON` samples which
+of the game's functions run and writes the ranking to
+`SD:/switch/cod1/profile.txt` every 10 seconds (the game runs a little slower).
 
 ## How it works
 

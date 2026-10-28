@@ -9,7 +9,8 @@
  *   - inclusive samples per guest function (on the shadow stack),
  *   - caller/callee pairs (which guest function the current code was called from),
  *   - call edges on the shadow stack (inclusive samples per caller -> callee: a call tree).
- * Results go to ux0:data/cod1/profile.txt (Vita) or cod1_profile.txt (desktop) every
+ * Results go to ux0:data/cod1/profile.txt (Vita), sdmc:/switch/cod1/profile.txt
+ * (Switch) or cod1_profile.txt (desktop) every
  * 10 seconds and at exit.
  *
  * Per-frame mode (rt_prof_reset(1)): samples wait in a buffer until the game thread
@@ -27,6 +28,10 @@ typedef int profile_translation_unit_is_not_empty;
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/cpu.h>
 #define PROFILE_PATH "ux0:data/cod1/profile.txt"
+#elif defined(__SWITCH__)
+#include <pthread.h>
+#include <unistd.h>
+#define PROFILE_PATH "sdmc:/switch/cod1/profile.txt"
 #else
 #include <pthread.h>
 #include <unistd.h>
@@ -239,6 +244,8 @@ static void dump_map(FILE *f, const Map *m, const char *title, int is_pair, uint
 extern RtCallCount __start_cod_calls[], __stop_cod_calls[];
 #if defined(__vita__)
 #define CALLS_PATH "ux0:data/cod1/calls.txt"
+#elif defined(__SWITCH__)
+#define CALLS_PATH "sdmc:/switch/cod1/calls.txt"
 #else
 #define CALLS_PATH "cod_calls.txt"
 #endif
