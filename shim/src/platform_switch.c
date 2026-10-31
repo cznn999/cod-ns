@@ -224,6 +224,7 @@ static void quit_requested(void)
  * sdmc:/switch/cod1/cod1.cfg: stick_sensitivity=<multiplier> (default 1.0),
  * invert_y=1, touch=0, gyro=0|1, gyro_ads=1 (gyro only while aiming with ZL),
  * gyro_yaw / gyro_roll / gyro_pitch=<signed counts per degree> (defaults -10 / -12 / -10),
+ * gyro_toggle=0 (R3, a click of the right stick, switches the gyro on and off),
  * gyro_debug=1 (logs the raw axes). */
 
 static const struct {
@@ -260,7 +261,7 @@ static int invert_y, touch_on = 1;
  * Sensor Y (tilting the device) turns, as does Z (sweeping the whole controller:
  * the two gestures players make), X (nodding) pitches. Each has a signed
  * counts-per-degree gain in the cfg, so a wrong direction is a minus sign. */
-static int gyro_on = 1, gyro_ads, gyro_debug;
+static int gyro_on = 1, gyro_ads, gyro_debug, gyro_toggle = 1;
 static float gyro_yaw = -10.0f, gyro_roll = -12.0f, gyro_pitch = -10.0f;
 static HidSixAxisSensorHandle sx_handheld, sx_full, sx_dual_l, sx_dual_r;
 
@@ -292,6 +293,8 @@ static void controls_init(void)
                 touch_on = line[6] != '0';
             else if (!strncmp(line, "gyro=", 5))
                 gyro_on = line[5] != '0';
+            else if (!strncmp(line, "gyro_toggle=", 12))
+                gyro_toggle = line[12] != '0';
             else if (!strncmp(line, "gyro_ads=", 9))
                 gyro_ads = line[9] == '1';
             else if (!strncmp(line, "gyro_debug=", 11))
@@ -489,6 +492,10 @@ static void pad_poll(void)
         int down = (buttons & b) != 0;
         if (down != ((prev_buttons & b) != 0))
             pad_control(button_map[i].control, down);
+    }
+    if (gyro_toggle && (buttons & HidNpadButton_StickR) && !(prev_buttons & HidNpadButton_StickR)) {
+        gyro_on = !gyro_on;
+        rt_log("gyro %s", gyro_on ? "on" : "off");
     }
     prev_buttons = buttons;
 

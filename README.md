@@ -194,7 +194,8 @@ All optional, all in `SD:/switch/cod1/`:
 
 | Option | Effect |
 |---|---|
-| `gyro=0` | Turns the gyro off (default 1). |
+| `gyro=0` | Starts with the gyro off (default 1). Click the right stick (**R3**) to switch it on or off during play. |
+| `gyro_toggle=0` | Disables the R3 switch. |
 | `gyro_ads=1` | Gyro only while aiming down the sights (ZL). |
 | `gyro_yaw=-10`, `gyro_roll=-12` | Turning, in mouse counts per degree: yaw is tilting the device, roll sweeping the whole controller. A minus sign reverses the direction. |
 | `gyro_pitch=-10` | Looking up and down (nodding the device). `invert_y=1` flips it. |
