@@ -188,7 +188,9 @@ All optional, all in `SD:/switch/cod1/`:
 | File | What it does |
 |---|---|
 | `args.txt` | The game's command line, e.g. `+set r_flares 0 +set com_hunkMegs 128`. Without it the port uses `+set r_flares 0 +set r_ignorehwgamma 0 +set com_introplayed 1`; a file of your own replaces all of these. |
-| `cod1.cfg` | Controls, one per line: `stick_sensitivity=1.5`, `invert_y=1`, `touch=0`. |
+| `cod1.cfg` | Controls, one per line: `stick_sensitivity=1.5`, `invert_y=1`, `touch=0`, `analog_move=0`, `move_curve=1.6`, `strafe_curve=2.0`. |
+
+The left stick is analog in play: how far you push it sets the pace, from a slow step to a full run, instead of pressing W A S D. `move_curve` shapes the pace (higher = a longer slow range), `strafe_curve` eases the sideways part on its own so forward stays dominant; `analog_move=0` goes back to keys. The menus still use the arrow keys.
 | `env.txt` | Port options, `NAME=value` per line (see below). |
 
 Options for `env.txt`:
