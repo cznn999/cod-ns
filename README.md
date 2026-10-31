@@ -188,7 +188,17 @@ All optional, all in `SD:/switch/cod1/`:
 | File | What it does |
 |---|---|
 | `args.txt` | The game's command line, e.g. `+set r_flares 0 +set com_hunkMegs 128`. Without it the port uses `+set r_flares 0 +set r_ignorehwgamma 0 +set com_introplayed 1`; a file of your own replaces all of these. |
-| `cod1.cfg` | Controls, one per line: `stick_sensitivity=1.5`, `invert_y=1`, `touch=0`. |
+| `cod1.cfg` | Controls, one per line: `stick_sensitivity=1.5`, `invert_y=1`, `touch=0`, and the gyro (below). |
+
+**Gyro** (also in `cod1.cfg`): motion aiming from the Joy-Cons, a Pro Controller or the console's own sensor, added to the right stick's look.
+
+| Option | Effect |
+|---|---|
+| `gyro=0` | Turns the gyro off (default 1). |
+| `gyro_ads=1` | Gyro only while aiming down the sights (ZL). |
+| `gyro_yaw=-10`, `gyro_roll=-12` | Turning, in mouse counts per degree: yaw is tilting the device, roll sweeping the whole controller. A minus sign reverses the direction. |
+| `gyro_pitch=-10` | Looking up and down (nodding the device). `invert_y=1` flips it. |
+| `gyro_debug=1` | Logs the raw sensor axes to `cod1.log`, to tune the signs. |
 | `env.txt` | Port options, `NAME=value` per line (see below). |
 
 Options for `env.txt`:
