@@ -222,7 +222,9 @@ static void quit_requested(void)
  *   touch screen (handheld): menus cursor and click, in play a drag looks around
  *
  * sdmc:/switch/cod1/cod1.cfg: stick_sensitivity=<multiplier> (default 1.0),
- * invert_y=1, touch=0. */
+ * invert_y=1, touch=0, gyro=0|1, gyro_ads=1 (gyro only while aiming with ZL),
+ * gyro_yaw / gyro_roll / gyro_pitch=<signed counts per degree> (defaults -10 / -12 / -10),
+ * gyro_debug=1 (logs the raw axes). */
 
 static const struct {
     uint64_t button;
@@ -253,11 +255,31 @@ static uint8_t stick_held[4];
 static float stick_sensitivity = 1.0f;
 static int invert_y, touch_on = 1;
 
+/* Gyro: the angular velocity is integrated over every sensor sample of the frame
+ * (the lifo holds 17) and turned into mouse counts, added to the right stick's.
+ * Sensor Y (tilting the device) turns, as does Z (sweeping the whole controller:
+ * the two gestures players make), X (nodding) pitches. Each has a signed
+ * counts-per-degree gain in the cfg, so a wrong direction is a minus sign. */
+static int gyro_on = 1, gyro_ads, gyro_debug;
+static float gyro_yaw = -10.0f, gyro_roll = -12.0f, gyro_pitch = -10.0f;
+static HidSixAxisSensorHandle sx_handheld, sx_full, sx_dual_l, sx_dual_r;
+
 static void controls_init(void)
 {
     padConfigureInput(1, HidNpadStyleSet_NpadStandard);
     padInitializeDefault(&pad);
     hidInitializeTouchScreen();
+    if (R_SUCCEEDED(hidGetSixAxisSensorHandles(&sx_handheld, 1, HidNpadIdType_Handheld, HidNpadStyleTag_NpadHandheld)))
+        hidStartSixAxisSensor(sx_handheld);
+    if (R_SUCCEEDED(hidGetSixAxisSensorHandles(&sx_full, 1, HidNpadIdType_No1, HidNpadStyleTag_NpadFullKey)))
+        hidStartSixAxisSensor(sx_full);
+    HidSixAxisSensorHandle dual[2];
+    if (R_SUCCEEDED(hidGetSixAxisSensorHandles(dual, 2, HidNpadIdType_No1, HidNpadStyleTag_NpadJoyDual))) {
+        sx_dual_l = dual[0];
+        sx_dual_r = dual[1];
+        hidStartSixAxisSensor(sx_dual_l);
+        hidStartSixAxisSensor(sx_dual_r);
+    }
     FILE *f = fopen(COD_SWITCH_CFG, "r");
     if (f) {
         char line[128];
@@ -268,6 +290,18 @@ static void controls_init(void)
                 invert_y = line[9] == '1';
             else if (!strncmp(line, "touch=", 6))
                 touch_on = line[6] != '0';
+            else if (!strncmp(line, "gyro=", 5))
+                gyro_on = line[5] != '0';
+            else if (!strncmp(line, "gyro_ads=", 9))
+                gyro_ads = line[9] == '1';
+            else if (!strncmp(line, "gyro_debug=", 11))
+                gyro_debug = line[11] == '1';
+            else if (!strncmp(line, "gyro_yaw=", 9))
+                gyro_yaw = strtof(line + 9, NULL);
+            else if (!strncmp(line, "gyro_roll=", 10))
+                gyro_roll = strtof(line + 10, NULL);
+            else if (!strncmp(line, "gyro_pitch=", 11))
+                gyro_pitch = strtof(line + 11, NULL);
         }
         fclose(f);
     }
@@ -275,6 +309,8 @@ static void controls_init(void)
         stick_sensitivity = 1.0f;
     rt_log("controls: right stick x%.2f%s, touch %s", (double)stick_sensitivity, invert_y ? ", inverted" : "",
            touch_on ? "on" : "off");
+    rt_log("controls: gyro %s%s, yaw %.1f roll %.1f pitch %.1f", gyro_on ? "on" : "off", gyro_ads ? " (aiming only)" : "",
+           (double)gyro_yaw, (double)gyro_roll, (double)gyro_pitch);
 }
 
 /* Stick axis (libnx: -32767..32767, up positive) -> about -100..100 with the
@@ -379,6 +415,65 @@ static void touch_poll(void)
     mouse_motion(mx, my);
 }
 
+/* The sensor to read: a paired controller wins over the console's own (a Pro
+ * Controller on an undocked console also reports the handheld style). */
+static HidSixAxisSensorHandle gyro_handle(void)
+{
+    u32 styles = padGetStyleSet(&pad);
+    if (styles & HidNpadStyleTag_NpadFullKey)
+        return sx_full;
+    if (styles & HidNpadStyleTag_NpadJoyDual)
+        return sx_dual_r;
+    return sx_handheld;
+}
+
+/* Gyro look: mouse counts from every sensor sample not yet seen. */
+static void gyro_poll(int aiming)
+{
+    static HidSixAxisSensorHandle cur;
+    static uint64_t last_sample;
+    static float acc_x, acc_y;
+    static unsigned dbg_n;
+    HidSixAxisSensorHandle h = gyro_handle();
+    HidSixAxisSensorState st[17];
+    size_t n = hidGetSixAxisSensorStates(h, st, 17);   /* newest first */
+    if (h.type_value != cur.type_value) {
+        cur = h;
+        last_sample = n ? st[0].sampling_number : 0;   /* a new sensor: start clean */
+        return;
+    }
+    float yaw = 0.0f, roll = 0.0f, pitch = 0.0f;
+    for (size_t i = n; i-- > 0;) {
+        if (st[i].sampling_number <= last_sample)
+            continue;
+        last_sample = st[i].sampling_number;
+        /* angular_velocity is in turns per second; delta_time is in ns. */
+        float dt = (float)st[i].delta_time * 1e-9f;
+        if (dt <= 0.0f || dt > 0.1f)
+            continue;
+        float ax = st[i].angular_velocity.x, ay = st[i].angular_velocity.y, az = st[i].angular_velocity.z;
+        if (gyro_debug && ++dbg_n % 200 == 0)
+            rt_log("gyro raw x %.3f y %.3f z %.3f", (double)ax, (double)ay, (double)az);
+        /* about a degree per second of noise is ignored */
+        if (ax > -0.003f && ax < 0.003f) ax = 0.0f;
+        if (ay > -0.003f && ay < 0.003f) ay = 0.0f;
+        if (az > -0.003f && az < 0.003f) az = 0.0f;
+        pitch += ax * dt * 360.0f;
+        yaw += ay * dt * 360.0f;
+        roll += az * dt * 360.0f;
+    }
+    if (!gyro_on || (gyro_ads && !aiming) || !pad_in_gameplay()) {
+        acc_x = acc_y = 0.0f;
+        return;
+    }
+    acc_x += yaw * gyro_yaw + roll * gyro_roll;
+    acc_y += pitch * gyro_pitch * (invert_y ? -1.0f : 1.0f);
+    int32_t mx = (int32_t)acc_x, my = (int32_t)acc_y;
+    acc_x -= (float)mx;
+    acc_y -= (float)my;
+    mouse_motion(mx, my);
+}
+
 static void pad_poll(void)
 {
     static uint64_t last_look;
@@ -410,6 +505,7 @@ static void pad_poll(void)
 
     if (touch_on)
         touch_poll();
+    gyro_poll((buttons & HidNpadButton_ZL) != 0);
 
     /* Right stick: relative mouse motion, scaled by elapsed time. */
     uint64_t now = armTicksToNs(armGetSystemTick()) / 1000u;
