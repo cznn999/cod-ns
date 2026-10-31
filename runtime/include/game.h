@@ -10,6 +10,13 @@
 /* cls.keyCatchers and cls.state (tools/find_uo_addresses.py). */
 #define COD_KEY_CATCHERS 0x04842104u
 #define COD_CLS_STATE    0x04842100u
+/* The kbutton_t of +forward, +back, +moveleft and +moveright, and frame_msec
+ * (found from the "+forward" command handlers; CL_KeyState reads them). */
+#define COD_KB_FORWARD   0x00879F18u
+#define COD_KB_BACK      0x00879F30u
+#define COD_KB_LEFT      0x00879F78u
+#define COD_KB_RIGHT     0x00879F90u
+#define COD_FRAME_MSEC   0x048CD5C0u
 /* CoDUOSP.exe's image ends at 0x0492A000: the game DLLs follow it (bases in
  * CMakeLists.txt), then the thunks, the stack and the heap. */
 #define COD_IMAGE_END    0x0492A000u
@@ -25,6 +32,11 @@
 #define COD_EXE_NAME "CoDSP.exe"
 #define COD_KEY_CATCHERS 0x01439264u
 #define COD_CLS_STATE    0x01439260u
+#define COD_KB_FORWARD   0x0086CDD8u
+#define COD_KB_BACK      0x0086CDF0u
+#define COD_KB_LEFT      0x0086CE38u
+#define COD_KB_RIGHT     0x0086CE50u
+#define COD_FRAME_MSEC   0x01423C64u
 #define COD_IMAGE_END    0x01864000u
 #define COD_THUNK_BASE   0x02000000u
 #define COD_STACK_BASE   0x02100000u
